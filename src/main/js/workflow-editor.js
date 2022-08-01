@@ -130,6 +130,7 @@ jenkinsJSModules.import('ace-editor:ace-editor-122')
                     },
                 });
                 
+                // Add breakpoint toggle on lines
                 editor.on("guttermousedown", function(e) {
                     var target = e.domEvent.target;
 
@@ -157,9 +158,40 @@ jenkinsJSModules.import('ace-editor:ace-editor-122')
 
                     e.stop();
                 });
+                
+                // Insert REPL at each break point
+                textarea.bindFirst("submit", {
+                    var repl = `
+                        while (true) {
+                            def cmd = input message: 'What to run:', parameters: [string(defaultValue: '', description: '', name: 'cmd')]
+                            try {
+                                print Eval.x(this,cmd)
+                            } catch (e) {
+                                print e
+                            }
+                        }
+                    `
+                    
+                    var scriptLines = textarea.val.split(/\r?\n/);
+                    var replLines = repl.split(/\r?\n/).length;
+                    for (int i = 0; i < breakpoints.size; ++i) {
+                        scriptLines = scriptLines.splice(i*replLines + breakpoints.keys()[i], 0, repl);
+                    }
+                    textarea.val(scriptLines.join("\r\n"));
+                });
             });
 
             wrapper.show();
             textarea.hide();
         }
     });
+
+$.fn.bindFirst = function(name, fn) {
+  var elem, handlers, i, _len;
+  this.bind(name, fn);
+  for (i = 0, _len = this.length; i < _len; i++) {
+    elem = this[i];
+    handlers = jQuery._data(elem).events[name.split('.')[0]];
+    handlers.unshift(handlers.pop());
+  }
+};
